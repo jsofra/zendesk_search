@@ -47,7 +47,7 @@
 (deftest lookup-entites-test
 
   (is (= (take 2 test-entities)
-         (search/lookup-entities (search/build-inverted-indexes {:test test-entities}) [:test :string "string"])))
+         (search/lookup-entities (search/build-inverted-indexes {:test test-entities}) [:test :string "string"] nil)))
 
   (is (= (rest test-entities)
-         (search/lookup-entities (search/build-inverted-indexes {:test test-entities}) [:test :vector "four"]))))
+         (search/lookup-entities (search/build-inverted-indexes {:test test-entities}) [:test :vector "four"] nil))))
