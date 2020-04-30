@@ -3,14 +3,14 @@
   (:require [clojure.data.json :as json]
             [clojure.java.io :as io]))
 
-(defn read-entities [path]
+(defn read-catalogue [path]
   (with-open [reader (io/reader (io/resource path))]
     (json/read reader :key-fn keyword)))
 
-(defn read-data []
-  {:users         (read-entities "data/users.json")
-   :organizations (read-entities "data/organizations.json")
-   :tickets       (read-entities "data/tickets.json")})
+(defn read-catalogues []
+  {:users         (read-catalogue "data/users.json")
+   :organizations (read-catalogue "data/organizations.json")
+   :tickets       (read-catalogue "data/tickets.json")})
 
 (defn invert-entity
   [index entity]
@@ -18,29 +18,37 @@
                (assoc m k (into {} (map vector (if (coll? v) v [v]) (repeat [index])))))
              {} entity))
 
-(defn build-inverted-index [entities]
+(defn build-inverted-index [catalogue]
   (apply merge-with
          (partial merge-with into)
-         (map-indexed invert-entity entities)))
+         (map-indexed invert-entity catalogue)))
 
-(defn build-inverted-indexes [entities-map]
-  {:entities         entities-map
-   :inverted-indexes (reduce-kv (fn [m k entities]
-                                  (assoc m k (build-inverted-index entities)))
-                                {} entities-map)})
+(defn build-inverted-indexes [catalogues]
+  {:catalogues       catalogues
+   :inverted-indexes (reduce-kv (fn [m k catalogue]
+                                  (assoc m k (build-inverted-index catalogue)))
+                                {} catalogues)})
 
-(defn lookup-entities [{:keys [entities inverted-indexes]}
-                       [entity-type field value]
-                       selection]
-  (when-let [field-indexes (get-in inverted-indexes [entity-type field])]
-    (if value
-      (map (get entities entity-type) (get field-indexes value))
-      (let [indexes (set (apply concat (vals field-indexes)))]
-        (->> (get entities entity-type)
-             (map-indexed (fn [index entity]
-                            (when (not (contains? indexes index))
-                              entity)))
-             (filter identity))))))
+(defn lookup-entities
+  [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
+  (if-let [catalogue (get catalogues catalogue-key)]
+    (if-let [field-indexes (get-in inverted-indexes [catalogue-key field])]
+      (if value
+        (map catalogue (get field-indexes value))
+        (let [indexes (set (apply concat (vals field-indexes)))]
+          (->> catalogue
+               (map-indexed (fn [index entity]
+                              (when (not (contains? indexes index))
+                                entity)))
+               (filter identity))))
+      (throw (ex-info (format "Field '%s' not found not found in catalogue '%s'." field catalogue-key)
+                      {:error   ::unknown-field
+                       :context {:search      [catalogue-key field value]
+                                 :know-fields (keys (get inverted-indexes catalogue-key))}})))
+    (throw (ex-info (format "Catalogue '%s' not found." catalogue-key)
+                    {:error   ::unknown-catalogue
+                     :context {:search          [catalogue-key field value]
+                               :know-catalogues (keys catalogues)}}))))
 
 (defn select-fields [selection entities]
   (if selection
@@ -57,26 +65,27 @@
   "
   ([inverted-index-map query]
    (search inverted-index-map query nil))
-  ([inverted-index-map {:keys [find include select]} parent]
-   (let [[entity-type field value] find
-         entities                  (->> [entity-type field (if parent (get parent value) value)]
+  ([inverted-index-map {:keys [find include select as]} parent]
+   (let [[catalogue-key field value] find
+         entities                  (->> [catalogue-key field (if parent (get parent value) value)]
                                         (lookup-entities inverted-index-map)
                                         (select-fields select))]
-     (if include
-       (mapv #(reduce (fn [entity {:keys [find as] :as query}]
-                        (let [result (search inverted-index-map query entity)]
-                         (merge entity
-                                (if as
-                                  {as result}
-                                  (first result)))))
-                     %
-                     include)
-             entities)
-       entities))))
+     (let [result (if include
+                    (mapv
+                     #(reduce
+                       (fn [entity query]
+                         (merge entity (search inverted-index-map query entity)))
+                       %
+                       include)
+                     entities)
+                    entities)]
+       (if as
+         {as result}
+         (first result))))))
 
 (comment
 
-  (def DB (build-inverted-indexes (read-data)))
+  (def DB (build-inverted-indexes (read-catalogues)))
 
   (def R (search DB
                  {:find    [:users :alias "Miss Dana"]
