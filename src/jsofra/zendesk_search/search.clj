@@ -4,8 +4,13 @@
             [clojure.java.io :as io]))
 
 (defn read-catalogue [path]
-  (with-open [reader (io/reader (io/resource path))]
-    (json/read reader :key-fn keyword)))
+  (try
+    (with-open [reader (io/reader (io/resource path))]
+      (json/read reader :key-fn keyword))
+    (catch Exception e
+      (throw (ex-info (format "Could not read catalogue from '%s'." path)
+                      {:error   ::read-catalogue-failure
+                       :context {:path path}})))))
 
 (defn read-catalogues []
   {:users         (read-catalogue "data/users.json")
