@@ -1,10 +1,22 @@
 (ns jsofra.zendesk-search.search
   "Functions for creating search indexes for the Zendesk data.")
 
+
+(defn normalize-value [value]
+  (-> value
+      str
+      clojure.string/lower-case))
+
+(defn normalize-values [values]
+  (->> (tree-seq coll? seq values)
+       rest
+       (filter (complement coll?))
+       (map normalize-value)))
+
 (defn invert-entity
   [index entity]
   (reduce-kv (fn [m k v]
-               (assoc m k (into {} (map vector (if (coll? v) v [v]) (repeat [index])))))
+               (assoc m k (into {} (map vector (normalize-values [v]) (repeat [index])))))
              {} entity))
 
 (defn build-inverted-index [catalogue]
@@ -23,7 +35,7 @@
   (if-let [catalogue (get catalogues catalogue-key)]
     (if-let [field-indexes (get-in inverted-indexes [catalogue-key field])]
       (if value
-        (map catalogue (get field-indexes value))
+        (map catalogue (get field-indexes (normalize-value value)))
         (let [indexes (set (apply concat (vals field-indexes)))]
           (->> catalogue
                (map-indexed (fn [index entity]
@@ -74,19 +86,24 @@
 
 (comment
 
-  (def DB (build-inverted-indexes (read-catalogues)))
+  (require '[jsofra.zendesk-search.catalogues :as catalogues])
+
+  (def DB (build-inverted-indexes (catalogues/read-catalogues {:users         "./catalogues/users.json"
+                                                               :organizations "./catalogues/organizations.json"
+                                                               :tickets       "./catalogues/tickets.json"})))
 
   (def R (search DB
-                 {:find    [:users :alias "Miss Dana"]
-                  :include [{:find   [:organizations :_id :organization_id]
-                             :select {:name :organization_name}}
-                            {:find   [:tickets :assignee_id :_id]
-                             :select {:_id     :ticket_id
-                                      :subject :subject}
-                             :as     :assigned_tickets}
-                            {:find   [:tickets :submitter_id :_id]
-                             :select {:_id     :ticket_id
-                                      :subject :subject}
-                             :as     :submitted_tickets}]}))
+                 {:find    [:users "alias" "Miss Dana"]
+                  :include [{:find   [:organizations "_id" "organization_id"]
+                             :select {"name" "organization_name"}}
+                            {:find   [:tickets "assignee_id" "_id"]
+                             :select {"_id"     "ticket_id"
+                                      "subject" "subject"}
+                             :as     "assigned_tickets"}
+                            {:find   [:tickets "submitter_id" "_id"]
+                             :select {"_id"     "ticket_id"
+                                      "subject" "subject"}
+                             :as     "submitted_tickets"}]
+                  :as :users}))
 
   )

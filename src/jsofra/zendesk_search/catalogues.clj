@@ -5,14 +5,13 @@
 (defn read-catalogue [path]
   (try
     (with-open [reader (io/reader path)]
-      (json/read reader :key-fn keyword))
+      (json/read reader))
     (catch Exception e
       (throw (ex-info (format "Could not read catalogue from '%s'." path)
                       {:error   ::read-failure
                        :context {:path path}})))))
 
 (defn read-catalogues [paths-map]
-  (zipmap (keys paths-map)
-          (->> (vals paths-map)
-               (map #(future (read-catalogue %)))
-               (map deref))))
+  (reduce-kv (fn [m k path]
+               (assoc m k (read-catalogue path)))
+             {} paths-map))
