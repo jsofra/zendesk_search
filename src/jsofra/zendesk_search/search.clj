@@ -7,22 +7,30 @@
       str
       clojure.string/lower-case))
 
-(defn normalize-values [values]
+(defn analyze-value [analyzer value]
+  (if analyzer
+    (map normalize-value
+         (concat [value] (re-seq (re-pattern analyzer) value)))
+    [(normalize-value value)]))
+
+(defn analyze-values [analyzer values]
   (->> (tree-seq coll? seq values)
        rest
        (filter (complement coll?))
-       (map normalize-value)))
+       (mapcat (partial analyze-value analyzer))))
 
 (defn invert-entity
-  [index entity]
+  [analyzers index entity]
   (reduce-kv (fn [m k v]
-               (assoc m k (into {} (map vector (normalize-values [v]) (repeat [index])))))
+               (assoc m k (into {} (map vector
+                                        (analyze-values (get analyzers k) [v])
+                                        (repeat [index])))))
              {} entity))
 
-(defn build-inverted-index [catalogue]
+(defn build-inverted-index [{:keys [entities analyzers]}]
   (apply merge-with
          (partial merge-with into)
-         (map-indexed invert-entity catalogue)))
+         (map-indexed (partial invert-entity analyzers) entities)))
 
 (defn build-inverted-indexes [catalogues]
   {:catalogues       catalogues
@@ -32,12 +40,12 @@
 
 (defn lookup-entities
   [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
-  (if-let [catalogue (get catalogues catalogue-key)]
+  (if-let [{:keys [entities]} (get catalogues catalogue-key)]
     (if-let [field-indexes (get-in inverted-indexes [catalogue-key field])]
       (if value
-        (map catalogue (get field-indexes (normalize-value value)))
+        (map entities (get field-indexes (normalize-value value)))
         (let [indexes (set (apply concat (vals field-indexes)))]
-          (->> catalogue
+          (->> entities
                (map-indexed (fn [index entity]
                               (when (not (contains? indexes index))
                                 entity)))
@@ -88,12 +96,13 @@
 
   (require '[jsofra.zendesk-search.catalogues :as catalogues])
 
-  (def DB (build-inverted-indexes (catalogues/read-catalogues {:users         "./catalogues/users.json"
-                                                               :organizations "./catalogues/organizations.json"
-                                                               :tickets       "./catalogues/tickets.json"})))
+
+  (def C (catalogues/read-catalogues (catalogues/read-config "./catalogues.edn")))
+
+  (def DB (build-inverted-indexes C))
 
   (def R (search DB
-                 {:find    [:users "alias" "Miss Dana"]
+                 {:find    [:users "created_at" "2016-04-18"]
                   :include [{:find   [:organizations "_id" "organization_id"]
                              :select {"name" "organization_name"}}
                             {:find   [:tickets "assignee_id" "_id"]

@@ -1,0 +1,18 @@
+{:catalogues {:users         {:path      "./catalogues/users.json"
+                              :analyzers {"created_at" "\\d{4}-\\d{1,2}-\\d{1,2}"}}
+              :organizations {:path      "./catalogues/organizations.json"
+                              :analyzers {}}
+              :tickets       {:path      "./catalogues/tickets.json"
+                              :analyzers {}}}
+ :queries    {:users {:find    [:users :field? :value?]
+                      :include [{:find   [:organizations "_id" "organization_id"]
+                                 :select {"name" "organization_name"}}
+                                {:find   [:tickets "assignee_id" "_id"]
+                                 :select {"_id"     "ticket_id"
+                                          "subject" "subject"}
+                                 :as     "assigned_tickets"}
+                                {:find   [:tickets "submitter_id" "_id"]
+                                 :select {"_id"     "ticket_id"
+                                          "subject" "subject"}
+                                 :as     "submitted_tickets"}]
+                      :as      :users}}}

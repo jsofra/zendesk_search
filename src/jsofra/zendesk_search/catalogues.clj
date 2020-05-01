@@ -1,5 +1,6 @@
 (ns jsofra.zendesk-search.catalogues
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]))
 
 (defn read-catalogue [path]
@@ -9,9 +10,27 @@
     (catch Exception e
       (throw (ex-info (format "Could not read catalogue from '%s'." path)
                       {:error   ::read-failure
-                       :context {:path path}})))))
+                       :context {:path path}}
+                      e)))))
 
-(defn read-catalogues [paths-map]
-  (reduce-kv (fn [m k path]
-               (assoc m k (read-catalogue path)))
-             {} paths-map))
+(defn read-catalogues [{:keys [catalogues]}]
+  (reduce-kv (fn [m k catalogue]
+                (assoc m k (assoc catalogue
+                                  :entities
+                                  (read-catalogue (:path catalogue)))))
+              {} catalogues))
+
+(defn read-config [path]
+  (try
+    (with-open [r (io/reader path)]
+      (edn/read (java.io.PushbackReader. r)))
+    (catch java.io.IOException e
+      (throw (ex-info (format "Could not read catalogue config from '%s'." path)
+                      {:error   ::read-failure
+                       :context {:path path}}
+                      e)))
+    (catch RuntimeException e
+      (throw (ex-info (format "Could not parse catalogue config from '%s'." path)
+                      {:error   ::parse-failure
+                       :context {:path path}}
+                      e)))))
