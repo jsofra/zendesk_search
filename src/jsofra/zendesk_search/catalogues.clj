@@ -13,7 +13,7 @@
                        :context {:path path}}
                       e)))))
 
-(defn read-catalogues [{:keys [catalogues]}]
+(defn read-catalogues [catalogues]
   (reduce-kv (fn [m k catalogue]
                 (assoc m k (assoc catalogue
                                   :entities
@@ -34,3 +34,7 @@
                       {:error   ::parse-failure
                        :context {:path path}}
                       e)))))
+
+(defn build-query [catalogues {:keys [catalogue field value]}]
+  (clojure.walk/postwalk-replace {:field? field :value? value}
+                                 (get-in catalogues [(keyword catalogue) :query])))

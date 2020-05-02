@@ -29,7 +29,7 @@
            "q" :quit
            :options)})
 
-(defn search-catalogue-message [{:keys [db]} _]
+(defn search-catalogue-message [db _]
   (clojure.string/join
    "\n"
    (concat ["Enter the catalogue you would like to search for:"]
@@ -39,15 +39,28 @@
   {:params {:catalogue input}
    :next   :search-field})
 
-(defn search-field-message [{:keys [db]} {:keys [catalogue]}]
+(defn search-field-message [db {:keys [catalogue]}]
   (clojure.string/join
    "\n"
-   (concat [(format "Enter the field to search for within %s:" catalogue)]
+   (concat [(format "Enter the field to search for within '%s':" catalogue)]
            (map #(str " * " (name %)) (search/list-fields db (keyword catalogue))))))
 
-(defn search-field-response [_ _ input]
-  {:params {:field input}
-   :next   :pause})
+(defn search-field-response [_ params input]
+  {:params (assoc params :field input)
+   :next   :search-value})
+
+(defn search-value-message [db {:keys [field catalogue]}]
+  (format "Enter a value of field '%s' to search for in '%s':" field catalogue))
+
+(defn search-value-response [_ params input]
+  {:params (assoc params :value input)
+   :next   :search-results})
+
+(defn search-results-message [db params]
+  (let [query   (catalogues/build-query (:catalogues db) params)
+        results (get (search/search db query) (keyword (:catalogue params)))]
+    (clojure.string/join "\n" (map str results))))
+
 
 (def cli-state-machine
   {:pause            {:message  pause-message
@@ -58,24 +71,30 @@
                       :response search-catalogue-response}
    :search-field     {:message  search-field-message
                       :response search-field-response}
+   :search-value     {:message  search-value-message
+                      :response search-value-response}
+   :search-results   {:message  search-results-message
+                      :response (fn [_ _ _] {:next :options})}
    :quit             {:message  exit-message
                       :response (fn [_ _ _] (System/exit 1))}})
 
-(defn run-cli-loop! [cli-states system]
+(defn run-cli-loop! [cli-states db]
   (loop [state  :pause
          params nil]
     (let [{:keys [message response]} (get cli-states state)]
       (do
-        (println (message system params) "\n")
+        (println (message db params) "\n")
         (flush)
-        (let [{:keys [next params]} (response system params (read-line))]
+        (let [{:keys [next params]} (response db params (read-line))]
           (recur next params))))))
 
 (defn -main [& args]
-  (let [config (catalogues/read-config "./catalogues.edn")
-        db     (search/build-inverted-indexes (catalogues/read-catalogues config))]
+  (let [db     (-> "./catalogues.edn"
+                   catalogues/read-config
+                   catalogues/read-catalogues
+                   search/build-inverted-indexes)]
     (println welcome-message "\n")
-    (run-cli-loop! cli-state-machine {:config config :db db})))
+    (run-cli-loop! cli-state-machine db)))
 
 
 

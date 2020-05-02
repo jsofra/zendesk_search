@@ -2,21 +2,17 @@
   "Functions for creating search indexes for the Zendesk data.")
 
 (defn normalize-value [value]
-  (-> value
-      str
-      clojure.string/lower-case))
+  (clojure.string/lower-case (str value)))
 
 (defn analyze-value [analyzer value]
   (if analyzer
-    (map normalize-value
-         (concat [value] (re-seq (re-pattern analyzer) value)))
+    (map normalize-value (concat [value] (re-seq (re-pattern analyzer) value)))
     [(normalize-value value)]))
 
 (defn analyze-values [analyzer values]
-  (->> (tree-seq coll? seq values)
-       rest
-       (filter (complement coll?))
-       (mapcat (partial analyze-value analyzer))))
+  (mapcat (partial analyze-value analyzer)
+          (filter (complement coll?)
+                  (rest (tree-seq coll? seq values)))))
 
 (defn invert-entity
   [analyzers index entity]
@@ -36,12 +32,6 @@
    :inverted-indexes (reduce-kv (fn [m k catalogue]
                                   (assoc m k (build-inverted-index catalogue)))
                                 {} catalogues)})
-
-(defn list-catalogues [{:keys [catalogues]}]
-  (sort (keys catalogues)))
-
-(defn list-fields [{:keys [inverted-indexes]} catalogue-key]
-  (sort (keys (get inverted-indexes catalogue-key))))
 
 (defn lookup-entities
   [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
@@ -72,6 +62,14 @@
                 (clojure.set/rename-keys selection)))
           entities)
     entities))
+
+;; The public interface
+
+(defn list-catalogues [{:keys [catalogues]}]
+  (sort (keys catalogues)))
+
+(defn list-fields [{:keys [inverted-indexes]} catalogue-key]
+  (sort (keys (get inverted-indexes catalogue-key))))
 
 (defn search
   "
