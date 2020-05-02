@@ -1,7 +1,6 @@
 (ns jsofra.zendesk-search.search
   "Functions for creating search indexes for the Zendesk data.")
 
-
 (defn normalize-value [value]
   (-> value
       str
@@ -37,6 +36,12 @@
    :inverted-indexes (reduce-kv (fn [m k catalogue]
                                   (assoc m k (build-inverted-index catalogue)))
                                 {} catalogues)})
+
+(defn list-catalogues [{:keys [catalogues]}]
+  (sort (keys catalogues)))
+
+(defn list-fields [{:keys [inverted-indexes]} catalogue-key]
+  (sort (keys (get inverted-indexes catalogue-key))))
 
 (defn lookup-entities
   [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
@@ -91,28 +96,3 @@
        (if as
          {as result}
          (first result))))))
-
-(comment
-
-  (require '[jsofra.zendesk-search.catalogues :as catalogues])
-
-
-  (def C (catalogues/read-catalogues (catalogues/read-config "./catalogues.edn")))
-
-  (def DB (build-inverted-indexes C))
-
-  (def R (search DB
-                 {:find    [:users "created_at" "2016-04-18"]
-                  :include [{:find   [:organizations "_id" "organization_id"]
-                             :select {"name" "organization_name"}}
-                            {:find   [:tickets "assignee_id" "_id"]
-                             :select {"_id"     "ticket_id"
-                                      "subject" "subject"}
-                             :as     "assigned_tickets"}
-                            {:find   [:tickets "submitter_id" "_id"]
-                             :select {"_id"     "ticket_id"
-                                      "subject" "subject"}
-                             :as     "submitted_tickets"}]
-                  :as :users}))
-
-  )
