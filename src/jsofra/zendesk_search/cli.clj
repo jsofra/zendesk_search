@@ -1,7 +1,8 @@
 (ns jsofra.zendesk-search.cli
   (:require [jsofra.zendesk-search.catalogues :as catalogues]
             [jsofra.zendesk-search.search :as search]
-            [clojure.tools.cli :as cli])
+            [clojure.tools.cli :as cli]
+            [zprint.core :as zprint])
   (:gen-class))
 
 (def welcome-message
@@ -67,7 +68,7 @@
   (let [query   (catalogues/build-query (:catalogues db) params)
         results (get (search/search db query) (keyword (:catalogue params)))]
     (if (seq results)
-      (clojure.string/join "\n" (map str results))
+      (zprint/czprint-str results)
       (format "No results found for '%s' of field '%s' in '%s'." value field catalogue))))
 
 (defn error-message [_ {:keys [error-message]}] error-message)

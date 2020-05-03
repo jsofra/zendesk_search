@@ -35,24 +35,25 @@
 
 (defn lookup-entities
   [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
-  (if-let [{:keys [entities]} (get catalogues catalogue-key)]
-    (if-let [field-indexes (get-in inverted-indexes [catalogue-key field])]
-      (if value
-        (map entities (get field-indexes (normalize-value value)))
-        (let [indexes (set (apply concat (vals field-indexes)))]
-          (->> entities
-               (map-indexed (fn [index entity]
-                              (when (not (contains? indexes index))
-                                entity)))
-               (filter identity))))
-      (throw (ex-info (format "Field '%s' not found not found in catalogue '%s'." field (name catalogue-key))
-                      {:error   ::unknown-field
-                       :context {:search      [catalogue-key field value]
-                                 :know-fields (keys (get inverted-indexes catalogue-key))}})))
-    (throw (ex-info (format "Catalogue '%s' not found." (name catalogue-key))
-                    {:error   ::unknown-catalogue
-                     :context {:search          [catalogue-key field value]
-                               :know-catalogues (keys catalogues)}}))))
+  (let [normalized-value (normalize-value value)]
+    (if-let [{:keys [entities]} (get catalogues catalogue-key)]
+      (if-let [field-indexes (get-in inverted-indexes [catalogue-key field])]
+        (if (seq normalized-value)
+          (map entities (get field-indexes normalized-value))
+          (let [indexes (set (apply concat (vals field-indexes)))]
+            (->> entities
+                 (map-indexed (fn [index entity]
+                                (when (not (contains? indexes index))
+                                  entity)))
+                 (filter identity))))
+        (throw (ex-info (format "Field '%s' not found not found in catalogue '%s'." field (name catalogue-key))
+                        {:error   ::unknown-field
+                         :context {:search      [catalogue-key field value]
+                                   :know-fields (keys (get inverted-indexes catalogue-key))}})))
+      (throw (ex-info (format "Catalogue '%s' not found." (name catalogue-key))
+                      {:error   ::unknown-catalogue
+                       :context {:search          [catalogue-key field value]
+                                 :know-catalogues (keys catalogues)}})))))
 
 (defn select-fields [selection entities]
   (if selection

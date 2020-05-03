@@ -19,7 +19,7 @@
                              :include [{:find   [:users "organization_id" "_id"]
                                         :select {"name" "name"}
                                         :as     "users"}]
-                             :as      "organizations"}}
+                             :as      :organizations}}
  :tickets       {:path      "./catalogues/tickets.json"
                  :analyzers {"created_at" "\\d{4}-\\d{1,2}-\\d{1,2}"
                              "due_at" "\\d{4}-\\d{1,2}-\\d{1,2}"}
@@ -28,4 +28,4 @@
                                         :select {"name" "assignee_name"}}
                                        {:find   [:users "_id" "submitter_id"]
                                         :select {"name" "submitter_name"}}]
-                             :as      "tickets"}}}
+                             :as      :tickets}}}
