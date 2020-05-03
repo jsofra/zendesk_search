@@ -117,9 +117,10 @@
 
 (comment
 
-  (def C (catalogues/read-catalogues (catalogues/read-config "./catalogues.edn")))
-
-  (def DB (search/build-inverted-indexes C))
+  (def DB (-> "./catalogues.edn"
+              catalogues/read-config
+              catalogues/read-catalogues
+              search/build-inverted-indexes))
 
   (def R (search/search DB
                         {:find    [:users "created_at" "2016-04-18"]

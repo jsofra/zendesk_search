@@ -1,6 +1,8 @@
 {:users         {:path      "./catalogues/users.json"
                  :analyzers {"created_at"    "\\d{4}-\\d{1,2}-\\d{1,2}"
-                             "last_login_at" "\\d{4}-\\d{1,2}-\\d{1,2}"}
+                             "last_login_at" "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "name"          "\\w+"
+                             "alias"         "\\w+"}
                  :query     {:find    [:users :field? :value?]
                              :include [{:find   [:organizations "_id" "organization_id"]
                                         :select {"name" "organization_name"}}
@@ -21,8 +23,10 @@
                                         :as     "users"}]
                              :as      :organizations}}
  :tickets       {:path      "./catalogues/tickets.json"
-                 :analyzers {"created_at" "\\d{4}-\\d{1,2}-\\d{1,2}"
-                             "due_at" "\\d{4}-\\d{1,2}-\\d{1,2}"}
+                 :analyzers {"created_at"  "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "due_at"      "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "subject"     "\\w+"
+                             "description" "\\w+"}
                  :query     {:find    [:tickets :field? :value?]
                              :include [{:find   [:users "_id" "assignee_id"]
                                         :select {"name" "assignee_name"}}

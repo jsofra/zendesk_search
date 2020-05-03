@@ -4,15 +4,12 @@
 (defn normalize-value [value]
   (clojure.string/lower-case (str value)))
 
-(defn analyze-value [analyzer value]
-  (if analyzer
-    (map normalize-value (concat [value] (re-seq (re-pattern analyzer) value)))
-    [(normalize-value value)]))
-
 (defn analyze-values [analyzer values]
-  (mapcat (partial analyze-value analyzer)
-          (filter (complement coll?)
-                  (rest (tree-seq coll? seq values)))))
+  (if (coll? values)
+    (mapcat (partial analyze-values analyzer) values)
+    (if analyzer
+      (map normalize-value (concat [values] (re-seq (re-pattern analyzer) values)))
+      [(normalize-value values)])))
 
 (defn invert-entity
   [analyzers index entity]
