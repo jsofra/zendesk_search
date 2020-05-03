@@ -45,11 +45,11 @@
                               (when (not (contains? indexes index))
                                 entity)))
                (filter identity))))
-      (throw (ex-info (format "Field '%s' not found not found in catalogue '%s'." field catalogue-key)
+      (throw (ex-info (format "Field '%s' not found not found in catalogue '%s'." field (name catalogue-key))
                       {:error   ::unknown-field
                        :context {:search      [catalogue-key field value]
                                  :know-fields (keys (get inverted-indexes catalogue-key))}})))
-    (throw (ex-info (format "Catalogue '%s' not found." catalogue-key)
+    (throw (ex-info (format "Catalogue '%s' not found." (name catalogue-key))
                     {:error   ::unknown-catalogue
                      :context {:search          [catalogue-key field value]
                                :know-catalogues (keys catalogues)}}))))
@@ -64,6 +64,12 @@
     entities))
 
 ;; The public interface
+
+(defn has-catalogue? [{:keys [catalogues]} catalogue-key]
+  (contains? catalogues (keyword catalogue-key)))
+
+(defn has-field? [{:keys [inverted-indexes]} catalogue-key field]
+  (contains? (get inverted-indexes (keyword catalogue-key)) field))
 
 (defn list-catalogues [{:keys [catalogues]}]
   (sort (keys catalogues)))

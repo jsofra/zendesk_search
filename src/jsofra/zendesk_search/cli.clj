@@ -19,7 +19,8 @@
 (defn options-message [_ _]
   (clojure.string/join
    "\n"
-   ["Select search options:"
+   ["------------------------------------------------------------"
+    "Select search options:"
     " * s) to search the Zendesk catalogues"
     " * q) to quit"]))
 
@@ -32,12 +33,15 @@
 (defn search-catalogue-message [db _]
   (clojure.string/join
    "\n"
-   (concat ["Enter the catalogue you would like to search for:"]
+   (concat ["Enter the catalogue you would like to search in:"]
            (map #(str " * " (name %)) (search/list-catalogues db)))))
 
-(defn search-catalogue-response [_ _ input]
-  {:params {:catalogue input}
-   :next   :search-field})
+(defn search-catalogue-response [db params input]
+  (if (search/has-catalogue? db input)
+    {:params (assoc params :catalogue input)
+     :next   :search-field}
+    {:params {:error-message (format "No catalogue with the name '%s' found." input)}
+     :next   :error}))
 
 (defn search-field-message [db {:keys [catalogue]}]
   (clojure.string/join
@@ -45,9 +49,12 @@
    (concat [(format "Enter the field to search for within '%s':" catalogue)]
            (map #(str " * " (name %)) (search/list-fields db (keyword catalogue))))))
 
-(defn search-field-response [_ params input]
-  {:params (assoc params :field input)
-   :next   :search-value})
+(defn search-field-response [db {:keys [catalogue] :as params} input]
+  (if (search/has-field? db catalogue input)
+    {:params (assoc params :field input)
+     :next   :search-value}
+    {:params {:error-message (format "No field with the name '%s' found in catalogue '%s'." input catalogue)}
+     :next   :error}))
 
 (defn search-value-message [db {:keys [field catalogue]}]
   (format "Enter a value of field '%s' to search for in '%s':" field catalogue))
@@ -56,11 +63,14 @@
   {:params (assoc params :value input)
    :next   :search-results})
 
-(defn search-results-message [db params]
+(defn search-results-message [db {:keys [catalogue field value] :as params}]
   (let [query   (catalogues/build-query (:catalogues db) params)
         results (get (search/search db query) (keyword (:catalogue params)))]
-    (clojure.string/join "\n" (map str results))))
+    (if (seq results)
+      (clojure.string/join "\n" (map str results))
+      (format "No results found for '%s' of field '%s' in '%s'." value field catalogue))))
 
+(defn error-message [_ {:keys [error-message]}] error-message)
 
 (def cli-state-machine
   {:pause            {:message  pause-message
@@ -76,27 +86,33 @@
    :search-results   {:message  search-results-message
                       :response (fn [_ _ _] {:next :options})}
    :quit             {:message  exit-message
-                      :response (fn [_ _ _] (System/exit 1))}})
+                      :response (fn [_ _ _] (System/exit 1))}
+   :error            {:message  error-message
+                      :response (fn [_ _ _] {:next :options})}})
 
 (defn run-cli-loop! [cli-states db]
   (loop [state  :pause
-         params nil]
+         params {}]
     (let [{:keys [message response]} (get cli-states state)]
       (do
-        (println (message db params) "\n")
+        (try
+          (println (message db params) "\n")
+          (catch Exception e
+            (println (ex-message e) "\n")))
         (flush)
         (let [{:keys [next params]} (response db params (read-line))]
           (recur next params))))))
 
 (defn -main [& args]
-  (let [db     (-> "./catalogues.edn"
-                   catalogues/read-config
-                   catalogues/read-catalogues
-                   search/build-inverted-indexes)]
-    (println welcome-message "\n")
-    (run-cli-loop! cli-state-machine db)))
-
-
+  (try
+    (let [db     (-> "./catalogues.edn"
+                     catalogues/read-config
+                     catalogues/read-catalogues
+                     search/build-inverted-indexes)]
+      (println welcome-message "\n")
+      (run-cli-loop! cli-state-machine db))
+    (catch Exception e
+      (println (ex-message e)))))
 
 (comment
 
