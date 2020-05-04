@@ -11,7 +11,8 @@
 
 (defn analyze-values
   "
-  Recursively flatten values. Normalize them, and apply regex analysers to them.
+  Recursively flatten values, singular values will be placed in a collection.
+  Normalizes them, and applies regex analysers to them.
   The regex analysers will produce a seq of new values, they will also be flattened.
   "
   [analyzer values]
@@ -69,6 +70,8 @@
           field-indexes      (get-in inverted-indexes [catalogue-key field])]
       (if (seq normalized-value)
         (map entities (get field-indexes normalized-value))
+        ;; handle the case of missing fields in an entity
+        ;; finds all the fields that don't have that field indexed
         (let [indexes (set (apply concat (vals field-indexes)))]
           (->> entities
                (map-indexed (fn [index entity]
