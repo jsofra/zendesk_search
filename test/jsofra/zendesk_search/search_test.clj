@@ -121,3 +121,15 @@
 
   (is (= test-entities
          (search/select-fields nil test-entities))))
+
+(deftest database-introspection-fns-test
+
+  (let [database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
+                                                 :catalogue-2 {:entities test-entities :analyzers {}}})]
+    (is (search/has-catalogue? database :catalogue-1))
+    (is (not (search/has-catalogue? database :non-existent-catalogue)))
+    (is (search/has-field? database :catalogue-1 "string"))
+    (is (not (search/has-field? database :catalogue-1 "non-existent-field")))
+    (is (= [:catalogue-1 :catalogue-2] (search/list-catalogues database)))
+    (is (= (search/list-fields database :catalogue-1) (search/list-fields database :catalogue-2)))
+    (is (= ["bool" "int" "sentence" "string" "vector"] (search/list-fields database :catalogue-1)))))
