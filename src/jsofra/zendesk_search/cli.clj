@@ -1,8 +1,7 @@
 (ns jsofra.zendesk-search.cli
   (:require [jsofra.zendesk-search.catalogues :as catalogues]
             [jsofra.zendesk-search.search :as search]
-            [clojure.tools.cli :as cli]
-            [zprint.core :as zprint])
+            [fipp.edn :as fipp])
   (:gen-class))
 
 (def welcome-message
@@ -68,7 +67,7 @@
   (let [query   (catalogues/build-query (:catalogues db) params)
         results (get (search/query db query) (keyword (:catalogue params)))]
     (if (seq results)
-      (zprint/czprint-str results)
+      (with-out-str (fipp/pprint results))
       (format "No results found for '%s' of field '%s' in '%s'." value field catalogue))))
 
 (defn error-message [_ {:keys [error-message]}] error-message)
@@ -91,7 +90,15 @@
    :error            {:message  error-message
                       :response (fn [_ _ _] {:next :options})}})
 
-(defn run-cli-loop! [cli-states db]
+(defn run-cli-loop!
+  "
+  Continuously loop through the `cli-state-machine`:
+   * print :message
+   * capture input
+   * run :response
+   * got to the next state returned be :response
+  "
+  [cli-states db]
   (loop [state  :pause
          params {}]
     (let [{:keys [message response]} (get cli-states state)]
