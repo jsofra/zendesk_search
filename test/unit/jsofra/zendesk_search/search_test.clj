@@ -19,7 +19,7 @@
                      "bool"   false
                      "vector" ["five"]}])
 
-(deftest normalize-value-test
+(deftest ^:unit normalize-value-test
 
   (are [normalized-value value] (= normalized-value (search/normalize-value value))
     "hello" "hElLo"
@@ -27,7 +27,7 @@
     "true"  true))
 
 
-(deftest analyze-values-test
+(deftest ^:unit analyze-values-test
 
   (testing "Analyzing flattens and normalizes values."
     (are [analized-values values] (= analized-values (search/analyze-values nil values))
@@ -47,7 +47,7 @@
         (concat sentence-expected-1 sentence-expected-2) [sentence-1 sentence-2]))))
 
 
-(deftest invert-entity-test
+(deftest ^:unit invert-entity-test
 
   (testing "Inversion of an entity"
     (testing "Should now be a path field->value->[index] for each field."
@@ -63,7 +63,7 @@
              (get (search/invert-entity {"sentence" "\\w+"} 0 (first test-entities)) "sentence"))))))
 
 
-(deftest build-inverted-index-test
+(deftest ^:unit build-inverted-index-test
 
   (testing "The building of a full inverted index of a catalogue."
     (testing "Inverting a single entity should be equivalent to inverting a sequence with a single entity."
@@ -88,7 +88,7 @@
              (search/build-inverted-index {:entities test-entities :analyzers {}}))))))
 
 
-(deftest build-inverted-indexes-test
+(deftest ^:unit build-inverted-indexes-test
 
   (testing "The building of inverted-indexes (database)."
     (let [catalogue          {:entities test-entities :analyzers {}}
@@ -101,7 +101,7 @@
              (search/build-inverted-indexes catalogues))))))
 
 
-(deftest lookup-entites-test
+(deftest ^:unit lookup-entites-test
 
   (let [database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}})]
     (testing "Looking up entities with simple value"
@@ -117,7 +117,7 @@
              (search/lookup-entities database [:catalogue-1 "string" nil]))))))
 
 
-(deftest select-fields-test
+(deftest ^:unit select-fields-test
 
   (is (= [{"id" 1 "bool" false}
           {"id" 2 "bool" true}
@@ -129,7 +129,7 @@
          (search/select-fields nil test-entities))))
 
 
-(deftest database-introspection-fns-test
+(deftest ^:unit database-introspection-fns-test
 
   (let [database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
                                                  :catalogue-2 {:entities test-entities :analyzers {}}})]
@@ -142,11 +142,9 @@
     (is (= ["bool" "int" "sentence" "string" "vector"] (search/list-fields database :catalogue-1)))))
 
 
-(deftest query-test
+(deftest ^:unit query-test
 
-  (let [database           (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
-                                                           :catalogue-2 {:entities join-test-entities :analyzers {}}})
-        join-test-entities [{"test_id"     1
+  (let [join-test-entities [{"test_id"     1
                              "test_id_2"   4
                              "name"        "test_id_1"
                              "description" "I am a test"}
@@ -157,8 +155,10 @@
                             {"test_id"     3
                              "test_id_2"   4
                              "name"        "test_id_3"
-                             "description" "I am a test"}]]
+                             "description" "I am a test"}]
 
+        database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
+                                                 :catalogue-2 {:entities join-test-entities :analyzers {}}})]
 
     (testing "A basic find query."
           (is (= (first (search/lookup-entities database [:catalogue-1 "vector" "four"]))
