@@ -66,7 +66,7 @@
 
 (defn search-results-message [db {:keys [catalogue field value] :as params}]
   (let [query   (catalogues/build-query (:catalogues db) params)
-        results (get (search/search db query) (keyword (:catalogue params)))]
+        results (get (search/query db query) (keyword (:catalogue params)))]
     (if (seq results)
       (zprint/czprint-str results)
       (format "No results found for '%s' of field '%s' in '%s'." value field catalogue))))
@@ -122,7 +122,7 @@
               catalogues/read-catalogues
               search/build-inverted-indexes))
 
-  (def R (search/search DB
+  (def R (search/query DB
                         {:find    [:users "created_at" "2016-04-18"]
                          :include [{:find   [:organizations "_id" "organization_id"]
                                     :select {"name" "organization_name"}}

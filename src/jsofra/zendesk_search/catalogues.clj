@@ -35,6 +35,11 @@
                        :context {:path path}}
                       e)))))
 
-(defn build-query [catalogues {:keys [catalogue field value]}]
+(defn build-query
+  "
+  Looks up query from configuration for a given 'catalogue' and replaces the keys
+  :field? and :value? with the given 'field' and 'value' respectively.
+  "
+  [catalogues {:keys [catalogue field value]}]
   (clojure.walk/postwalk-replace {:field? field :value? value}
                                  (get-in catalogues [(keyword catalogue) :query])))
