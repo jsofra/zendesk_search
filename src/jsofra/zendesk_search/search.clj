@@ -30,7 +30,7 @@
   The 'entity' is converted it from a map:
 
   field->value/s to field->analyzed-values->[index]
-"
+  "
   [analyzers index entity]
   (reduce-kv (fn [m k v]
                (assoc m k (into {} (map vector
@@ -132,8 +132,8 @@
   If the :as value is left out the result will be assumed to be a single value thus just the first value will be returned.
   For sub queries that value will be merged into the parent.
   "
-  ([database query]
-   (search database query nil))
+  ([database query-map]
+   (query database query-map nil))
   ([database {:keys [find include select as]} parent]
    (let [[catalogue-key field value] find
          entities                  (->> [catalogue-key field (if parent (get parent value) value)]
@@ -142,8 +142,8 @@
      (let [result (if include
                     (mapv
                      #(reduce
-                       (fn [entity query]
-                         (merge entity (search database query entity)))
+                       (fn [entity query-map]
+                         (merge entity (query database query-map entity)))
                        %
                        include)
                      entities)
