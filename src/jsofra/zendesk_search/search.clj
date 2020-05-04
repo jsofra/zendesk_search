@@ -1,5 +1,6 @@
 (ns jsofra.zendesk-search.search
-  "Functions for creating search indexes for the Zendesk data.")
+  "Functions for creating search indexes for the Zendesk data."
+  (:require [clojure.set :as clojure.set]))
 
 (defn normalize-value
   "

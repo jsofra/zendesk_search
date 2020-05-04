@@ -122,7 +122,7 @@
 
 (defn -main [& args]
   (try
-    (let [db (-> "./catalogues.edn"
+    (let [db (-> ".zendesk-search/catalogues.edn"
                  catalogues/read-config
                  catalogues/read-catalogues
                  search/build-inverted-indexes)]

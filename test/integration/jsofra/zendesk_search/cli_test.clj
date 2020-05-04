@@ -32,7 +32,7 @@
 
   (testing "End-to-end scenarios tests"
 
-    (let [db (-> "./catalogues.edn"
+    (let [db (-> ".zendesk-search/catalogues.edn"
                  catalogues/read-config
                  catalogues/read-catalogues
                  search/build-inverted-indexes)]

@@ -1,0 +1,35 @@
+{:users         {:path      ".zendesk-search/catalogues/users.json"
+                 :analyzers {"created_at"    "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "last_login_at" "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "name"          "\\w+"
+                             "alias"         "\\w+"}
+                 :query     {:find    [:users :field? :value?]
+                             :include [{:find   [:organizations "_id" "organization_id"]
+                                        :select {"name" "organization_name"}}
+                                       {:find   [:tickets "assignee_id" "_id"]
+                                        :select {"_id"     "ticket_id"
+                                                 "subject" "subject"}
+                                        :as     "assigned_tickets"}
+                                       {:find   [:tickets "submitter_id" "_id"]
+                                        :select {"_id"     "ticket_id"
+                                                 "subject" "subject"}
+                                        :as     "submitted_tickets"}]
+                             :as      :users}}
+ :organizations {:path      ".zendesk-search/catalogues/organizations.json"
+                 :analyzers {"created_at" "\\d{4}-\\d{1,2}-\\d{1,2}"}
+                 :query     {:find    [:organizations :field? :value?]
+                             :include [{:find   [:users "organization_id" "_id"]
+                                        :select {"name" "name"}
+                                        :as     "users"}]
+                             :as      :organizations}}
+ :tickets       {:path      ".zendesk-search/catalogues/tickets.json"
+                 :analyzers {"created_at"  "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "due_at"      "\\d{4}-\\d{1,2}-\\d{1,2}"
+                             "subject"     "\\w+"
+                             "description" "\\w+"}
+                 :query     {:find    [:tickets :field? :value?]
+                             :include [{:find   [:users "_id" "assignee_id"]
+                                        :select {"name" "assignee_name"}}
+                                       {:find   [:users "_id" "submitter_id"]
+                                        :select {"name" "submitter_name"}}]
+                             :as      :tickets}}}
