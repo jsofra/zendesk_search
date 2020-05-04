@@ -15,9 +15,7 @@
 
 (defn read-catalogues [catalogues]
   (reduce-kv (fn [m k catalogue]
-                (assoc m k (assoc catalogue
-                                  :entities
-                                  (read-catalogue (:path catalogue)))))
+                (assoc m k (assoc catalogue :entities (read-catalogue (:path catalogue)))))
               {} catalogues))
 
 (defn read-config [path]
@@ -25,15 +23,9 @@
     (with-open [r (io/reader path)]
       (edn/read (java.io.PushbackReader. r)))
     (catch java.io.IOException e
-      (throw (ex-info (format "Could not read catalogue config from '%s'." path)
-                      {:error   ::read-failure
-                       :context {:path path}}
-                      e)))
+      (throw (ex-info (format "Could not read catalogue config from '%s'." path) {} e)))
     (catch RuntimeException e
-      (throw (ex-info (format "Could not parse catalogue config from '%s'." path)
-                      {:error   ::parse-failure
-                       :context {:path path}}
-                      e)))))
+      (throw (ex-info (format "Could not parse catalogue config from '%s'." path) {} e)))))
 
 (defn build-query
   "
