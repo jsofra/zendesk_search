@@ -26,6 +26,7 @@
     "100"   100
     "true"  true))
 
+
 (deftest analyze-values-test
 
   (testing "Analyzing flattens and normalizes values."
@@ -45,6 +46,7 @@
         sentence-expected-2                              sentence-2
         (concat sentence-expected-1 sentence-expected-2) [sentence-1 sentence-2]))))
 
+
 (deftest invert-entity-test
 
   (testing "Inversion of an entity"
@@ -59,6 +61,7 @@
     (testing "Should apply analyzing."
       (is (= {"one, two." [0], "one" [0], "two" [0]}
              (get (search/invert-entity {"sentence" "\\w+"} 0 (first test-entities)) "sentence"))))))
+
 
 (deftest build-inverted-index-test
 
@@ -84,6 +87,7 @@
               "sentence" {"one, two." [0]}}
              (search/build-inverted-index {:entities test-entities :analyzers {}}))))))
 
+
 (deftest build-inverted-indexes-test
 
   (testing "The building of inverted-indexes (database)."
@@ -96,20 +100,22 @@
                                  :catalogue-2 inverted-catalogue}}
              (search/build-inverted-indexes catalogues))))))
 
+
 (deftest lookup-entites-test
 
-  (let [database (search/build-inverted-indexes {:test {:entities test-entities :analyzers {}}})]
+  (let [database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}})]
     (testing "Looking up entities with simple value"
       (is (= (subvec test-entities 0 2)
-             (search/lookup-entities database [:test "string" "string"]))))
+             (search/lookup-entities database [:catalogue-1 "string" "string"]))))
 
     (testing "Looking up entities with a value in a vector"
       (is (= (subvec test-entities 1 3)
-             (search/lookup-entities database [:test "vector" "four"]))))
+             (search/lookup-entities database [:catalogue-1 "vector" "four"]))))
 
     (testing "Looking up entities with empty values"
       (is (= (subvec test-entities 3 4)
-             (search/lookup-entities database [:test "string" nil]))))))
+             (search/lookup-entities database [:catalogue-1 "string" nil]))))))
+
 
 (deftest select-fields-test
 
@@ -122,6 +128,7 @@
   (is (= test-entities
          (search/select-fields nil test-entities))))
 
+
 (deftest database-introspection-fns-test
 
   (let [database (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
@@ -133,3 +140,53 @@
     (is (= [:catalogue-1 :catalogue-2] (search/list-catalogues database)))
     (is (= (search/list-fields database :catalogue-1) (search/list-fields database :catalogue-2)))
     (is (= ["bool" "int" "sentence" "string" "vector"] (search/list-fields database :catalogue-1)))))
+
+
+(deftest query-test
+
+  (let [database           (search/build-inverted-indexes {:catalogue-1 {:entities test-entities :analyzers {}}
+                                                           :catalogue-2 {:entities join-test-entities :analyzers {}}})
+        join-test-entities [{"test_id"     1
+                             "test_id_2"   4
+                             "name"        "test_id_1"
+                             "description" "I am a test"}
+                            {"test_id"     2
+                             "test_id_2"   4
+                             "name"        "test_id_2"
+                             "description" "I am a test"}
+                            {"test_id"     3
+                             "test_id_2"   4
+                             "name"        "test_id_3"
+                             "description" "I am a test"}]]
+
+
+    (testing "A basic find query."
+          (is (= (first (search/lookup-entities database [:catalogue-1 "vector" "four"]))
+                 (search/query database {:find [:catalogue-1 "vector" "four"]}))))
+
+    (testing "Aliasing the results of query."
+      (is (= {:alias (search/lookup-entities database [:catalogue-1 "vector" "four"])}
+             (search/query database {:find [:catalogue-1 "vector" "four"]
+                                     :as   :alias}))))
+
+    (testing "A sub-query joining on a 1-to-1 relationship."
+      (is (= {"catalogue-1"
+              [(merge (nth test-entities 0) {"join_id" 1 "join_name" "test_id_1"})
+               (merge (nth test-entities 2) {"join_id" 3 "join_name" "test_id_3"})]}
+             (search/query database {:find    [:catalogue-1 "vector" "two"]
+                                     :include [{:find   [:catalogue-2 "test_id" "int"]
+                                                :select {"test_id" "join_id"
+                                                         "name"    "join_name"}}]
+                                     :as      "catalogue-1"}))))
+
+    (testing "A sub-query joining on a 1-to-many relationship."
+      (is (= (assoc (nth test-entities 3)
+                    "joined"
+                    [{"id" 1, "description" "I am a test"}
+                     {"id" 2, "description" "I am a test"}
+                     {"id" 3, "description" "I am a test"}])
+             (search/query database {:find    [:catalogue-1 "int" 4]
+                                     :include [{:find   [:catalogue-2 "test_id_2" "int"]
+                                                :select {"test_id"     "id"
+                                                         "description" "description"}
+                                                :as     "joined"}]}))))))
