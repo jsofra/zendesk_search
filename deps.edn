@@ -3,7 +3,7 @@
          org.clojure/data.json {:mvn/version "1.0.0"}
          fipp                  {:mvn/version "0.6.22"}}
  :aliases
- {:test    {:extra-paths ["test/unit" "test/integration"]}
+ {:test    {:extra-paths ["test"]}
   :runner  {:extra-deps {com.cognitect/test-runner
                          {:git/url "https://github.com/cognitect-labs/test-runner"
                           :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}

@@ -103,7 +103,7 @@
    * print :message
    * capture input
    * run :response
-   * got to the next state returned be :response
+   * go to the next state returned be :response
   "
   [cli-states db start-state]
   (loop [state  start-state
