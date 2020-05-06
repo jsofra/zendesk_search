@@ -53,4 +53,12 @@
                                               :value     ticket-id})
               result (search/query db query)]
           (is (= ticket-id (get-in result [:tickets 0 "_id"])))
-          (is (= user-id (get-in result [:tickets 0 "submitter_id"]))))))))
+          (is (= user-id (get-in result [:tickets 0 "submitter_id"])))))
+
+      (testing "Tickets query with empty description."
+        (let [query  (catalogues/build-query (:catalogues db)
+                                             {:catalogue :tickets
+                                              :field     "description"
+                                              :value     ""})
+              result (search/query db query)]
+          (is (= "4cce7415-ef12-42b6-b7b5-fb00e24f9cc1" (get-in result [:tickets 0 "_id"]))))))))
