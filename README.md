@@ -175,4 +175,10 @@ The command line interface is implemented as a simple finite state machine. Each
    * run `response`
    * go to the next state returned be `response`
 
-Integration tests for interface are written to mock out just the user input and capture everything printed to standard out. Through this method we are able to play out scenarios to test and test that we receive the expected out. The messages for each step were captured in functions in the `cli` namespace, this allow the tests to be written to match those messages but also allows the specific wording of the messages to change without breaking all the tests.
+### Testing
+
+As the inverted index is written as a simple transformation of the data using pure functions, with not contextual information about the data, it is very readily unit tested. There is good coverage of all the search capabilities with not mocking required.
+
+It is still important to verify the basic behaviour with real data, and the integration with the loading up of the queries, and data, from configuration. Integration tests have been put in place to test this. Loading the default data and queries from configuration and checking for some know examples.
+
+Integration tests are also provided for testing of the interface. They written to mock out just the user input and capture everything printed to standard out. Through this method we are able to play out scenarios to test and test that we receive the expected out. These types of tests have the tendency to be quite brittle, since any little change in wording can break them. For this reason the messages for each step are captured within functions in the `cli` namespace. The tests are written to match on the output of the message functions, allowing the exact wording to change but still check that the order of the messages is correct. They are still somewhat fragile tests but they read nicely and allow a developer to see at glance the scenario that is being played out so the trade-off is a good one.
