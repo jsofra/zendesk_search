@@ -166,6 +166,8 @@ The inverted index also enables efficient introspection. We can easily find a li
 
 This indexing scheme lends it self well to resolving relationships between the data catalogues. Searches into the index can be written to join on specific keys and each join will result in one more lookup. This is quite efficient.
 
+The empty may be searched for and they are handled but finding all the fields when building the index and if any entity is missing a field it is given one with an empty string in the index.
+
 ### Command line interface
 
 The command line interface is implemented as a simple finite state machine. Each state specifies a `message` and a `response`. When the state is entered the message gets printed and user input expected, the input is then processed by the `response` and the next state is returned. The loop is as follows:

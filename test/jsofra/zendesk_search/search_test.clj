@@ -72,7 +72,8 @@
 
     (testing "Inverting multiple entities should merge the values and have multiple indexes per value."
       (is (= {"string"   {"string"     [0 1]
-                          "string-new" [2]}
+                          "string-new" [2]
+                          ""           [3]}
               "int"      {"1" [0]
                           "2" [1]
                           "3" [2]
@@ -84,7 +85,8 @@
                           "three" [0 1]
                           "four"  [1 2]
                           "five"  [3]}
-              "sentence" {"one, two." [0]}}
+              "sentence" {"one, two." [0]
+                          ""          [1 2 3]}}
              (search/build-inverted-index {:entities test-entities :analyzers {}}))))))
 
 

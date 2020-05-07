@@ -46,9 +46,11 @@
   This is a linear operation an may get quite slow given a large number of 'entities'.
   "
   [{:keys [entities analyzers]}]
-  (apply merge-with
-         (partial merge-with into)
-         (map-indexed (partial invert-entity analyzers) entities)))
+  (let [all-fields-with-empty-vals (zipmap (set (mapcat keys entities)) (repeat ""))
+        entities-with-empty-vals   (map merge (repeat all-fields-with-empty-vals) entities)]
+    (apply merge-with
+           (partial merge-with into)
+           (map-indexed (partial invert-entity analyzers) entities-with-empty-vals))))
 
 (defn build-inverted-indexes
   "Builds a set of inverted indexes (a database) by building an index for each catalogue (set of entites) in a map."
@@ -69,16 +71,7 @@
   (let [normalized-value (normalize-value value)]
     (let [{:keys [entities]} (get catalogues catalogue-key)
           field-indexes      (get-in inverted-indexes [catalogue-key field])]
-      (if (seq normalized-value)
-        (map entities (get field-indexes normalized-value))
-        ;; handle the case of missing fields in an entity
-        ;; finds all the fields that don't have that field indexed
-        (let [indexes (set (apply concat (vals field-indexes)))]
-          (->> entities
-               (map-indexed (fn [index entity]
-                              (when (not (contains? indexes index))
-                                entity)))
-               (filter identity)))))))
+      (map entities (get field-indexes normalized-value)))))
 
 (defn select-fields
   "
