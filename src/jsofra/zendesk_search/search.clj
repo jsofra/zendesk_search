@@ -68,10 +68,10 @@
   Non-recursive, this is a constant time operation.
   "
   [{:keys [catalogues inverted-indexes]} [catalogue-key field value]]
-  (let [normalized-value (normalize-value value)]
-    (let [{:keys [entities]} (get catalogues catalogue-key)
-          field-indexes      (get-in inverted-indexes [catalogue-key field])]
-      (map entities (get field-indexes normalized-value)))))
+  (let [normalized-value (normalize-value value)
+        field-indexes    (get-in inverted-indexes [catalogue-key field])]
+    (map (get-in catalogues [catalogue-key :entities])
+         (get field-indexes normalized-value))))
 
 (defn select-fields
   "
